@@ -1,0 +1,4 @@
+#!/bin/sh
+# gamemode: open NULL // PLAY, the Null OS Gamer Mode launcher, full screen.
+# (Feral GameMode's own commands are gamemoded / gamemoderun; this name is free.)
+exec /usr/bin/null-play "$@"

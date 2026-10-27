@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' np-art: https: data:; style-src 'self'; font-src 'self'; script-src 'self'; connect-src 'none'; object-src 'none'; base-uri 'none'">
+<title>NULL // PLAY</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body data-input="keyboard">
+<div id="app">
+  <header class="topbar">
+    <div class="wordmark">NULL <span class="slash">//</span> PLAY</div>
+    <nav class="tabs" aria-label="Sections">
+      <span class="glyph g-lb" aria-hidden="true"></span>
+      <button class="tab" data-tab="home" data-nav>HOME</button>
+      <button class="tab" data-tab="library" data-nav>LIBRARY</button>
+      <button class="tab" data-tab="store" data-nav>STORE</button>
+      <button class="tab" data-tab="social" data-nav>SOCIAL</button>
+      <span class="glyph g-rb" aria-hidden="true"></span>
+    </nav>
+    <div class="spacer"></div>
+    <div class="status">
+      <span id="pad-status" class="pad" title="Controller"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 8h12a4 4 0 0 1 4 4l-1 5a2 2 0 0 1-3.6.8L15.5 16h-7l-1.9 1.8A2 2 0 0 1 3 17l-1-5a4 4 0 0 1 4-4z"/><path d="M7 11v3M5.5 12.5h3"/><circle cx="16" cy="11.5" r=".6"/><circle cx="18" cy="13.5" r=".6"/></svg><span class="dot"></span></span>
+      <span id="clock" class="clock">--:--</span>
+    </div>
+  </header>
+
+  <main id="view-library" class="view" hidden>
+    <div class="filterbar">
+      <div id="filters" class="filters" role="toolbar" aria-label="Filter by source"></div>
+      <div class="spacer"></div>
+      <button id="sort" class="pill" data-nav>SORT: <span id="sort-label">A–Z</span></button>
+      <button id="installed-only" class="pill" data-nav aria-pressed="true">INSTALLED ONLY</button>
+    </div>
+    <div id="grid-wrap" class="grid-wrap">
+      <div id="grid" class="grid" role="list"></div>
+    </div>
+  </main>
+
+  <main id="view-empty" class="view empty" hidden>
+    <div class="empty-left">
+      <svg id="packet" xmlns="http://www.w3.org/2000/svg" viewBox="-1 -1 14 16" width="140" height="160" shape-rendering="crispEdges" role="img" aria-label="Packet the robot, sleepy">
+        <rect x="5" y="0" width="2" height="1" fill="#2a7f8f"/><rect x="5.5" y="1" width="1" height="1" fill="#8b92a8"/>
+        <rect x="2" y="2" width="8" height="5" fill="#323c54"/><rect x="2" y="2" width="8" height="1" fill="#4a5677"/>
+        <rect x="3" y="3" width="6" height="3" fill="#0b0e15"/>
+        <rect x="1" y="4" width="1" height="2" fill="#4a5677"/><rect x="10" y="4" width="1" height="2" fill="#4a5677"/>
+        <rect x="3.75" y="4.5" width="1.5" height=".5" fill="#2a7f8f"/><rect x="6.75" y="4.5" width="1.5" height=".5" fill="#2a7f8f"/>
+        <rect x="3" y="7" width="6" height="4" fill="#323c54"/>
+        <rect x="4" y="8" width="1" height="2" fill="#00e5ff"/><rect x="5" y="8" width="1" height="2" fill="#00e5ff"/><rect x="6" y="9" width="1" height="1" fill="#39ff88"/>
+        <rect x="2" y="8" width="1" height="2" fill="#4a5677"/><rect x="9" y="8" width="1" height="2" fill="#4a5677"/>
+        <rect x="4" y="11" width="1" height="2" fill="#4a5677"/><rect x="7" y="11" width="1" height="2" fill="#4a5677"/>
+        <rect x="3" y="13" width="2" height="1" fill="#00e5ff"/><rect x="7" y="13" width="2" height="1" fill="#00e5ff"/>
+        <rect x="10.5" y="0" width="1" height=".5" fill="#8b92a8"/><rect x="11" y=".5" width=".5" height=".5" fill="#8b92a8"/><rect x="10.5" y="1" width="1" height=".5" fill="#8b92a8"/>
+      </svg>
+      <h1>NO GAMES ON THIS GRID YET</h1>
+      <p>Packet looked everywhere. Install a launcher and your games show up here on their own.</p>
+    </div>
+    <div class="empty-right">
+      <h2>SCAN RESULTS</h2>
+      <div id="scan-results"></div>
+      <button id="rescan" class="pill wide" data-nav>RESCAN</button>
+    </div>
+  </main>
+
+  <main id="view-soon" class="view soon" hidden>
+    <h1 id="soon-title">HOME</h1>
+    <p id="soon-text"></p>
+  </main>
+
+  <main id="view-loading" class="view loading">
+    <div class="wordmark big">NULL <span class="slash">//</span> PLAY</div>
+    <div class="vt">scanning your libraries…</div>
+  </main>
+
+  <footer id="hints" class="hints"></footer>
+</div>
+
+<div id="modal" class="modal" hidden>
+  <div class="modal-box" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+    <div id="modal-badge" class="badge blocked"></div>
+    <h2 id="modal-title"></h2>
+    <p id="modal-detail"></p>
+    <p id="modal-ac" class="vt dim"></p>
+    <div class="modal-actions">
+      <button id="modal-back" class="btn" data-nav data-modal>BACK</button>
+      <button id="modal-go" class="btn danger" data-nav data-modal>LAUNCH ANYWAY</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast" class="toast" hidden></div>
+
+<script src="nav.js"></script>
+<script src="gamepad.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

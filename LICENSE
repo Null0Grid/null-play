@@ -1,0 +1,14 @@
+Copyright (c) NULLGRID. All rights reserved.
+
+This software and its source code are proprietary. No part of it may be
+copied, modified, distributed or used without prior written permission
+from NULLGRID.
+
+Third-party components keep their own licenses:
+- Electron (MIT) — https://www.electronjs.org
+- Silkscreen font (SIL OFL 1.1) — fonts/LICENSE-Silkscreen.txt
+- VT323 font (SIL OFL 1.1) — fonts/LICENSE-VT323.txt
+- Inter font (SIL OFL 1.1) — fonts/LICENSE-Inter.txt
+- Anti-cheat compatibility list from AreWeAntiCheatYet (MIT,
+  Copyright (c) 2021 Starz0r, Curve) — data/anticheat.json,
+  https://github.com/AreWeAntiCheatYet/AreWeAntiCheatYet

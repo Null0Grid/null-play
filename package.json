@@ -1,0 +1,112 @@
+{
+  "name": "null-play",
+  "version": "0.1.0",
+  "description": "NULL // PLAY: full-screen game launcher (Gamer Mode) for Null OS. Steam, Heroic, Lutris and installed games, controller-first.",
+  "main": "main.js",
+  "license": "UNLICENSED",
+  "private": true,
+  "author": {
+    "name": "Null Grid",
+    "email": "support@nullgrid.dev"
+  },
+  "homepage": "https://nullgrid.dev",
+  "scripts": {
+    "start": "electron . --windowed",
+    "test": "node tests/scan.test.js",
+    "test:ui": "xvfb-run -a -s \"-screen 0 1440x900x24\" node tests/ui-phase1.test.js",
+    "dist:linux": "electron-builder --linux deb AppImage tar.gz --x64 --arm64 --publish never"
+  },
+  "devDependencies": {
+    "electron": "^45.0.0",
+    "electron-builder": "^26.18.0",
+    "playwright": "^1.64.1"
+  },
+  "build": {
+    "appId": "dev.nullgrid.nullplay",
+    "productName": "null-play",
+    "directories": {
+      "output": "dist",
+      "buildResources": "build"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "src/**",
+      "renderer/**",
+      "fonts/**",
+      "data/**",
+      "build/icon.png",
+      "package.json",
+      "!**/*.map"
+    ],
+    "asar": true,
+    "linux": {
+      "target": [
+        {
+          "target": "deb",
+          "arch": [
+            "x64",
+            "arm64"
+          ]
+        },
+        {
+          "target": "AppImage",
+          "arch": [
+            "x64",
+            "arm64"
+          ]
+        },
+        {
+          "target": "tar.gz",
+          "arch": [
+            "x64",
+            "arm64"
+          ]
+        }
+      ],
+      "icon": "build/icon.png",
+      "category": "Game",
+      "executableName": "null-play",
+      "synopsis": "NULL // PLAY: full-screen game launcher for Null OS",
+      "maintainer": "Null Grid <support@nullgrid.dev>",
+      "vendor": "Null Grid",
+      "desktop": {
+        "entry": {
+          "Name": "NULL // PLAY",
+          "GenericName": "Game Launcher",
+          "Comment": "Gamer Mode: your Steam, Heroic, Lutris and installed games in one controller-friendly launcher",
+          "Categories": "Game;",
+          "Keywords": "gamemode;games;launcher;steam;heroic;lutris;controller;",
+          "StartupWMClass": "null-play",
+          "StartupNotify": "true"
+        }
+      },
+      "artifactName": "${name}-${version}-${arch}.${ext}",
+      "syncDesktopName": true
+    },
+    "deb": {
+      "artifactName": "${name}_${version}_${arch}.${ext}",
+      "depends": [
+        "libnotify4",
+        "libnss3",
+        "libxss1",
+        "libxtst6",
+        "xdg-utils",
+        "libatspi2.0-0",
+        "libuuid1",
+        "libsecret-1-0"
+      ],
+      "recommends": [
+        "gamemode",
+        "libglib2.0-bin"
+      ],
+      "fpm": [
+        "build/gamemode=/usr/bin/gamemode"
+      ]
+    },
+    "appImage": {
+      "artifactName": "${name}-${version}-${arch}.${ext}"
+    }
+  },
+  "desktopName": "null-play.desktop"
+}

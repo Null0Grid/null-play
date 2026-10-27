@@ -1,0 +1,106 @@
+name: Release
+
+# Push a tag that matches the app version (package.json), with or without a
+# "v": v0.1.0 or 0.1.0. Or, for a tag that already exists: Actions > Release
+# > Run workflow, and type the tag.
+# Builds the .deb, AppImage and .tar.gz for x64 and arm64 and attaches them
+# to the release for that tag. Null OS's ISO build pulls the newest asset
+# matching (amd64|x86_64).*\.deb, i.e. null-play_<version>_amd64.deb.
+
+on:
+  push:
+    tags: ["v*", "[0-9]*.[0-9]*.[0-9]*"]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Existing tag to build and attach to its release (e.g. 0.1.0)"
+        required: true
+
+env:
+  TAG: ${{ inputs.tag || github.ref_name }}
+
+# Build jobs run third-party npm packages, so they only get to read; only the
+# job that attaches the files to the release can write.
+permissions:
+  contents: read
+
+jobs:
+  version:
+    name: Check tag matches the app version
+    runs-on: ubuntu-24.04
+    outputs:
+      version: ${{ steps.v.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.TAG }}
+      - id: v
+        run: |
+          app=$(node -p "require('./package.json').version")
+          tag="${TAG#v}"
+          if [ "$app" != "$tag" ]; then echo "::error::tag $TAG but package.json says $app"; exit 1; fi
+          echo "version=$app" >> "$GITHUB_OUTPUT"
+
+  linux:
+    name: Linux packages (.deb, AppImage, .tar.gz — x64 + arm64)
+    needs: version
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.TAG }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: System libraries (Electron + Xvfb + xdotool)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libnotify4 libnss3 libxss1 libxtst6 xdg-utils \
+            libatspi2.0-0 libuuid1 libsecret-1-0 libgbm1 libasound2t64 xvfb xdotool
+      - run: npm ci
+      - name: Tests (scanners, then the real app)
+        run: |
+          npm test
+          xvfb-run -a -s "-screen 0 1440x900x24" node tests/ui-phase1.test.js
+      - name: Build .deb, AppImage, .tar.gz (x64 + arm64)
+        run: npm run dist:linux
+      - name: Check the .deb has the app, its .desktop entry and the gamemode command
+        run: |
+          deb=$(ls dist/null-play_*_amd64.deb)
+          dpkg-deb -c "$deb" | grep -q './usr/bin/gamemode$' || { echo "::error::no /usr/bin/gamemode"; exit 1; }
+          dpkg-deb -c "$deb" | grep -q './usr/share/applications/null-play.desktop$' || { echo "::error::no .desktop file"; exit 1; }
+          dpkg-deb --fsys-tarfile "$deb" | tar -xO ./usr/share/applications/null-play.desktop | grep -qx 'Name=NULL // PLAY' || { echo "::error::wrong Name="; exit 1; }
+          dpkg-deb --fsys-tarfile "$deb" | tar -xO ./usr/share/applications/null-play.desktop | grep -qx 'Categories=Game;' || { echo "::error::wrong Categories="; exit 1; }
+      - uses: actions/upload-artifact@v4
+        with:
+          name: linux
+          path: |
+            dist/*.deb
+            dist/*.AppImage
+            dist/*.tar.gz
+
+  release:
+    name: Attach to the GitHub release
+    needs: [version, linux]
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+      - uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ env.TAG }}
+          append_body: true
+          name: NULL // PLAY ${{ needs.version.outputs.version }}
+          fail_on_unmatched_files: true
+          files: |
+            dist/linux/*.deb
+            dist/linux/*.AppImage
+            dist/linux/*.tar.gz
+          body: |
+            **Linux — x64 and arm64:**
+            - Debian 13+ / Ubuntu 24.04+ / Null OS: `sudo apt install ./null-play_${{ needs.version.outputs.version }}_amd64.deb` (or `_arm64.deb`), then run `gamemode` or pick NULL // PLAY from the Games menu.
+            - Any distro, no install: `chmod +x null-play-${{ needs.version.outputs.version }}-x86_64.AppImage` (or `-arm64.AppImage`) and run it.
+            - Anything else: unpack `null-play-${{ needs.version.outputs.version }}-x64.tar.gz` (or `-arm64.tar.gz`) and run the `null-play` binary inside.
