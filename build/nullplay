@@ -1,0 +1,3 @@
+#!/bin/sh
+# nullplay: open NULL // PLAY, the Null OS Gamer Mode launcher, full screen.
+exec /usr/bin/null-play "$@"

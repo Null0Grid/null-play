@@ -55,8 +55,22 @@ SteamGridDB is optional. Get a free key at steamgriddb.com → Preferences → A
 
 ## Open it
 
-- `gamemode` in a terminal, or **NULL // PLAY** in the start menu's Games section
+- type `nullplay` (or `gamemode`) in a terminal
+- the **NULL // PLAY** desktop shortcut or taskbar icon
+- **NULL // PLAY** in the start menu's Games section
 - `null-play --windowed` runs it in a window (handy while developing)
+
+## What installing the .deb sets up
+
+| | |
+|---|---|
+| Commands | `null-play`, `nullplay` and `gamemode` (all open it full screen) |
+| Menu entry | `NULL // PLAY` under Games |
+| Desktop shortcut | for every existing user who has a Desktop folder, and for new accounts (from `/etc/skel/Desktop`, which also covers the Null OS live user). Added once per user: if you delete it, an upgrade won't bring it back |
+| Taskbar pin | right away for anyone logged in to Plasma, and for everyone else at their next login (a Plasma update script). Added once; unpin it and it stays unpinned |
+| On removal | the commands, the shortcuts it added (never a file of yours) and the live taskbar pins are removed |
+
+The AppImage and .tar.gz don't install anything; they just run.
 
 ## Libraries
 
@@ -117,13 +131,14 @@ xvfb-run -a -s "-screen 0 1440x900x24" node tests/ui-phase1.test.js   # library,
 xvfb-run -a -s "-screen 0 1440x900x24" node tests/ui-phase2.test.js   # home, game page, art, animations
 xvfb-run -a -s "-screen 0 1440x900x24" node tests/ui-phase3.test.js   # quick settings, on-screen keyboard
 npm run dist:linux              # .deb, AppImage, .tar.gz for x64 + arm64 into dist/
+sudo bash tests/install-deb.sh dist/null-play_*_amd64.deb   # installs it for real and checks shortcuts / pin / removal
 ```
 
 Tests run against a generated fake home folder (`tests/fixtures/make-home.js`) with Steam, Heroic, Lutris and `.desktop` games and logging stand-ins for `xdg-open`, `gamemoderun` and `lutris`. The Phase 3 tests use stand-ins for `nmcli`, `wpctl`, `busctl`, `ddcutil`, `bluetoothctl` and `systemctl` (`tests/fixtures/fake-system.js`). The Phase 2 test runs a stand-in SteamGridDB on localhost (`NULLPLAY_SGDB_BASE`); `NULLPLAY_TEST_PICK_FILE` replaces the native file dialog there.
 
 ## Release
 
-Push a tag matching `package.json`'s version (`v1.1.0` or `1.1.0`). The Release workflow tests, builds x64 + arm64 `.deb`, AppImage and `.tar.gz`, checks the `.deb` contains `/usr/bin/gamemode` and a `NULL // PLAY` `.desktop` entry (`Categories=Game`), and attaches everything to the GitHub release. Null OS pulls `null-play_<version>_amd64.deb` at ISO build time.
+Push a tag matching `package.json`'s version (`v1.2.0` or `1.2.0`). The Release workflow tests, builds x64 + arm64 `.deb`, AppImage and `.tar.gz`, checks the `.deb` contents, installs it for real on the runner (`tests/install-deb.sh`: commands, desktop shortcuts, taskbar pin, reinstall, removal), and attaches everything to the GitHub release. Null OS pulls `null-play_<version>_amd64.deb` at ISO build time.
 
 ## License
 
