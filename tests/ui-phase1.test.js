@@ -38,9 +38,12 @@ async function start(fx) {
   const errors = [];
   win.on('pageerror', (e) => errors.push(e.message));
   await win.setViewportSize({ width: 1440, height: 810 });
-  await win.waitForSelector('#view-library:not([hidden]), #view-empty:not([hidden])', { timeout: 15000 });
+  await win.waitForSelector('#view-home:not([hidden]), #view-empty:not([hidden])', { timeout: 15000 });
+  await win.waitForSelector('#boot', { state: 'hidden', timeout: 5000 });
   await waitFor(() => app.evaluate(({ BrowserWindow }) => { const w = BrowserWindow.getAllWindows()[0]; if (!w.isFocused()) { w.show(); w.focus(); } return w.isFocused(); }));
   await wait(300);
+  // Phase 1 checks live on the LIBRARY tab (Home is covered by ui-phase2)
+  if (!(await win.$('#view-empty:not([hidden])'))) { key('3'); await win.waitForSelector('#view-library:not([hidden])'); }
   return { app, win, errors };
 }
 
@@ -195,14 +198,24 @@ const BTN = { A: 0, B: 1, X: 2, Y: 3, LB: 4, RB: 5, UP: 12, DOWN: 13, LEFT: 14, 
       assert.ok(await win.$eval('#modal', (m) => m.hidden));
     });
 
-    await check('X adds a favorite: star on the tile and a FAVORITES chip; X again removes it', async () => {
+    await check('favorite from the game page: star on the tile and a FAVORITES chip; unfavorite removes it', async () => {
       await goTo('Disco Elysium');
-      key('x');
+      const favorite = async () => {
+        key('x');
+        await win.waitForSelector('#view-detail:not([hidden])');
+        key('Right'); // PLAY → FAVORITE
+        assert.ok(/FAVORITE/.test((await focused(win)).text));
+        key('Return');
+        await wait(200);
+        key('Escape');
+        await win.waitForSelector('#view-library:not([hidden])');
+      };
+      await favorite();
       await waitFor(() => win.$('#filters [data-filter="FAVORITES"]'));
       assert.ok(await win.$('#filters [data-filter="FAVORITES"]'));
+      assert.strictEqual((await focused(win)).id, 'heroic:gog:1771589310', 'focus back on the same game');
       assert.ok(await win.$('#grid .tile.focus .fav'));
-      key('x');
-      await wait(200);
+      await favorite();
       assert.ok(!(await win.$('#filters [data-filter="FAVORITES"]')));
     });
 
@@ -213,6 +226,9 @@ const BTN = { A: 0, B: 1, X: 2, Y: 3, LB: 4, RB: 5, UP: 12, DOWN: 13, LEFT: 14, 
       assert.ok(await win.$eval('.tab[data-tab="social"]', (e) => e.classList.contains('active')));
       key('1', '1');
       assert.ok(await win.$eval('.tab[data-tab="library"]', (e) => e.classList.contains('active')));
+      key('1');
+      assert.ok(await win.$eval('.tab[data-tab="home"]', (e) => e.classList.contains('active')));
+      key('3');
       assert.ok((await focused(win)).index >= 0);
     });
 
@@ -230,7 +246,7 @@ const BTN = { A: 0, B: 1, X: 2, Y: 3, LB: 4, RB: 5, UP: 12, DOWN: 13, LEFT: 14, 
       await tap(win, BTN.LEFT);
       await waitFor(async () => (await win.textContent('#hints')).includes('APlay'));
       const hints = (await win.textContent('#hints')).replace(/\s+/g, '');
-      assert.ok(/APlay.*XFavorite.*YNextfilter.*BBack/.test(hints), hints);
+      assert.ok(/APlay.*XDetails.*YNextfilter.*BBack/.test(hints), hints);
       assert.strictEqual(await win.textContent('.g-lb'), 'LB');
       // go to the top-left tile with the d-pad
       for (let i = 0; i < 4; i++) await tap(win, BTN.UP);

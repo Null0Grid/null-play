@@ -8,12 +8,12 @@ const { scanDesktop } = require('./desktop');
 
 const STORE_OF = { steam: 'STEAM', heroic: 'HEROIC', lutris: 'LUTRIS', desktop: 'INSTALLED' };
 
-async function scanAll({ home, env, anticheat, history = {}, favorites = [], lutrisCmd } = {}) {
+async function scanAll({ home, env, anticheat, history = {}, favorites = [], lutrisCmd, onProgress } = {}) {
   const t0 = Date.now();
   const report = {};
   const safe = async (name, fn) => {
-    try { const g = await fn(); report[name] = { found: g.length }; return g; }
-    catch (e) { report[name] = { found: 0, error: String(e && e.message || e) }; return []; }
+    try { const g = await fn(); report[name] = { found: g.length }; if (onProgress) onProgress(name, g.length); return g; }
+    catch (e) { report[name] = { found: 0, error: String(e && e.message || e) }; if (onProgress) onProgress(name, 0); return []; }
   };
   const [steam, heroic, lutris, desktop] = await Promise.all([
     safe('steam', () => scanSteam(home)),

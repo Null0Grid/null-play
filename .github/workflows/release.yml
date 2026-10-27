@@ -1,7 +1,7 @@
 name: Release
 
 # Push a tag that matches the app version (package.json), with or without a
-# "v": v0.1.0 or 0.1.0. Or, for a tag that already exists: Actions > Release
+# "v": v0.2.0 or 0.2.0. Or, for a tag that already exists: Actions > Release
 # > Run workflow, and type the tag.
 # Builds the .deb, AppImage and .tar.gz for x64 and arm64 and attaches them
 # to the release for that tag. Null OS's ISO build pulls the newest asset
@@ -13,7 +13,7 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: "Existing tag to build and attach to its release (e.g. 0.1.0)"
+        description: "Existing tag to build and attach to its release (e.g. 0.2.0)"
         required: true
 
 env:
@@ -62,6 +62,7 @@ jobs:
         run: |
           npm test
           xvfb-run -a -s "-screen 0 1440x900x24" node tests/ui-phase1.test.js
+          xvfb-run -a -s "-screen 0 1440x900x24" node tests/ui-phase2.test.js
       - name: Build .deb, AppImage, .tar.gz (x64 + arm64)
         run: npm run dist:linux
       - name: Check the .deb has the app, its .desktop entry and the gamemode command

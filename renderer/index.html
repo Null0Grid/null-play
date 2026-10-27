@@ -6,7 +6,7 @@
 <title>NULL // PLAY</title>
 <link rel="stylesheet" href="style.css">
 </head>
-<body data-input="keyboard">
+<body data-input="keyboard" class="booting">
 <div id="app">
   <header class="topbar">
     <div class="wordmark">NULL <span class="slash">//</span> PLAY</div>
@@ -25,6 +25,60 @@
     </div>
   </header>
 
+  <main id="view-home" class="view home" hidden>
+    <div id="home-scroll" class="home-scroll" data-scroll>
+      <section id="hero" class="hero" aria-live="polite">
+        <div class="hero-art" aria-hidden="true"><img id="hero-img" alt=""></div>
+        <div class="hero-scrim" aria-hidden="true"></div>
+        <div class="hero-body">
+          <div class="chips"><span id="hero-store" class="chip"></span><span id="hero-gm" class="chip gm" hidden>GAMEMODE ON</span><span id="hero-ac" class="chip ac" hidden></span></div>
+          <img id="hero-logo" class="hero-logo" alt="" hidden>
+          <h1 id="hero-title" class="hero-title"></h1>
+          <div id="hero-meta" class="hero-meta"></div>
+          <div class="hero-actions" data-nav-entry="#hero-play">
+            <button id="hero-play" class="btn play" data-nav><svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 2l11 6-11 6z" fill="currentColor"/></svg>PLAY</button>
+            <button id="hero-details" class="btn" data-nav>DETAILS</button>
+            <button id="hero-fav" class="btn square" data-nav aria-label="Favorite">★</button>
+          </div>
+        </div>
+      </section>
+      <section class="row-sec">
+        <h2 id="continue-label" class="row-label">CONTINUE</h2>
+        <div id="continue" class="row continue" role="list" data-nav-entry="remember"></div>
+      </section>
+      <section class="row-sec">
+        <h2 class="row-label">LIBRARY <span id="peek-count" class="count"></span></h2>
+        <div id="peek" class="row peek" role="list" data-nav-entry="remember"></div>
+      </section>
+    </div>
+  </main>
+
+  <main id="view-detail" class="view detail" hidden>
+    <div class="detail-art" aria-hidden="true"><img id="d-hero" alt=""></div>
+    <div class="detail-scrim" aria-hidden="true"></div>
+    <div class="detail-body">
+      <div id="d-cover" class="cover d-cover"></div>
+      <div class="d-main">
+        <div class="chips"><span id="d-store" class="chip"></span><span id="d-ac" class="chip ac" hidden></span></div>
+        <h1 id="d-title" class="d-title"></h1>
+        <div id="d-stats" class="d-stats"></div>
+        <p id="d-acnote" class="d-acnote" hidden></p>
+        <div class="hero-actions" data-nav-entry="#d-play">
+          <button id="d-play" class="btn play" data-nav><svg width="18" height="18" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 2l11 6-11 6z" fill="currentColor"/></svg>PLAY</button>
+          <button id="d-fav" class="btn" data-nav>★ FAVORITE</button>
+          <button id="d-open" class="btn" data-nav>OPEN IN STEAM</button>
+        </div>
+      </div>
+      <div class="d-side">
+        <h2 class="row-label">OPTIONS</h2>
+        <button id="d-gm" class="opt" data-nav role="switch" aria-checked="true"><span class="lbl">FERAL GAMEMODE</span><span class="sw"><span></span></span></button>
+        <p id="d-gm-note" class="opt-note" hidden></p>
+        <button id="d-hide" class="opt" data-nav role="switch" aria-checked="false"><span class="lbl">HIDE FROM CONTINUE</span><span class="sw"><span></span></span></button>
+        <button id="d-art" class="opt" data-nav><span class="lbl">SET ARTWORK</span><span class="vt">›</span></button>
+      </div>
+    </div>
+  </main>
+
   <main id="view-library" class="view" hidden>
     <div class="filterbar">
       <div id="filters" class="filters" role="toolbar" aria-label="Filter by source"></div>
@@ -32,7 +86,7 @@
       <button id="sort" class="pill" data-nav>SORT: <span id="sort-label">A–Z</span></button>
       <button id="installed-only" class="pill" data-nav aria-pressed="true">INSTALLED ONLY</button>
     </div>
-    <div id="grid-wrap" class="grid-wrap">
+    <div id="grid-wrap" class="grid-wrap" data-scroll>
       <div id="grid" class="grid" role="list"></div>
     </div>
   </main>
@@ -67,7 +121,7 @@
     <p id="soon-text"></p>
   </main>
 
-  <main id="view-loading" class="view loading">
+  <main id="view-loading" class="view loading" hidden>
     <div class="wordmark big">NULL <span class="slash">//</span> PLAY</div>
     <div class="vt">scanning your libraries…</div>
   </main>
@@ -87,6 +141,68 @@
     </div>
   </div>
 </div>
+
+<div id="picker" class="modal" hidden>
+  <div class="picker-box" role="dialog" aria-modal="true" aria-labelledby="picker-title">
+    <div class="picker-head">
+      <h2 id="picker-title">ARTWORK</h2>
+      <div class="picker-tabs">
+        <span class="glyph g-lb2" aria-hidden="true"></span>
+        <button class="ptab" data-kind="cover" data-nav data-modal>COVER</button>
+        <button class="ptab" data-kind="hero" data-nav data-modal>HERO</button>
+        <button class="ptab" data-kind="logo" data-nav data-modal>LOGO</button>
+        <span class="glyph g-rb2" aria-hidden="true"></span>
+      </div>
+    </div>
+    <div id="picker-key" class="picker-key" hidden>
+      <p>Add a free <b>SteamGridDB</b> API key to browse art for every game. Get one at steamgriddb.com → Preferences → API, then paste it here.</p>
+      <div class="keyrow">
+        <label for="key-input" class="vt dim">API KEY</label>
+        <input id="key-input" type="password" autocomplete="off" spellcheck="false" data-nav data-modal>
+        <button id="key-save" class="btn" data-nav data-modal>SAVE</button>
+      </div>
+      <p id="key-msg" class="vt dim"></p>
+    </div>
+    <div id="picker-status" class="vt dim picker-status"></div>
+    <div id="picker-grid" class="picker-grid" role="list"></div>
+    <div class="modal-actions">
+      <button id="picker-file" class="btn" data-nav data-modal>CHOOSE FILE…</button>
+      <button id="picker-reset" class="btn" data-nav data-modal>RESET TO DEFAULT</button>
+      <button id="picker-close" class="btn" data-nav data-modal>DONE</button>
+    </div>
+  </div>
+</div>
+
+<div id="boot" class="boot" aria-hidden="true">
+  <div class="boot-noise"></div>
+  <div class="boot-tear t1"></div><div class="boot-tear t2"></div>
+  <div class="boot-mark">
+    <span class="wm c-pink">NULL // PLAY</span>
+    <span class="wm c-cyan">NULL // PLAY</span>
+    <span class="wm c-main">NULL <span class="slash">//</span> PLAY</span>
+    <div class="boot-slice"></div>
+  </div>
+  <div class="boot-scan">
+    <div class="boot-track">
+      <svg id="boot-packet" xmlns="http://www.w3.org/2000/svg" viewBox="-1 -1 14 16" width="35" height="40" shape-rendering="crispEdges">
+        <rect x="5" y="0" width="2" height="1" fill="#ff2e88"/><rect x="5.5" y="1" width="1" height="1" fill="#8b92a8"/>
+        <rect x="2" y="2" width="8" height="5" fill="#323c54"/><rect x="2" y="2" width="8" height="1" fill="#4a5677"/>
+        <rect x="3" y="3" width="6" height="3" fill="#0b0e15"/>
+        <rect x="1" y="4" width="1" height="2" fill="#4a5677"/><rect x="10" y="4" width="1" height="2" fill="#4a5677"/>
+        <rect class="ld1" x="3.75" y="4.25" width=".75" height=".75" fill="#00e5ff"/><rect class="ld2" x="5.6" y="4.25" width=".75" height=".75" fill="#39ff88"/><rect class="ld3" x="7.5" y="4.25" width=".75" height=".75" fill="#00e5ff"/>
+        <rect x="3" y="7" width="6" height="4" fill="#323c54"/>
+        <rect x="4" y="8" width="1" height="2" fill="#00e5ff"/><rect x="5" y="8" width="1" height="2" fill="#00e5ff"/><rect x="6" y="9" width="1" height="1" fill="#39ff88"/>
+        <rect x="2" y="8" width="1" height="2" fill="#4a5677"/><rect x="9" y="8" width="1" height="2" fill="#4a5677"/>
+        <g class="legs-a"><rect x="4" y="11" width="1" height="2" fill="#4a5677"/><rect x="7" y="11" width="1" height="2" fill="#4a5677"/><rect x="3" y="13" width="2" height="1" fill="#00e5ff"/><rect x="7" y="13" width="2" height="1" fill="#00e5ff"/></g>
+        <g class="legs-b"><rect x="4" y="11" width="1" height="2" fill="#4a5677"/><rect x="8" y="11" width="1" height="2" fill="#4a5677"/><rect x="4" y="13" width="2" height="1" fill="#00e5ff"/><rect x="8" y="13" width="2" height="1" fill="#00e5ff"/></g>
+      </svg>
+      <div class="boot-bar"><div id="boot-fill" class="boot-fill"></div></div>
+    </div>
+    <div id="boot-text" class="boot-text">scanning libraries…</div>
+  </div>
+</div>
+
+<div id="crt" class="crt" aria-hidden="true"><div class="crt-line"></div></div>
 
 <div id="toast" class="toast" hidden></div>
 

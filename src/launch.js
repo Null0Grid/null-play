@@ -95,4 +95,26 @@ function watchSteamGame(appid, env) {
   setTimeout(tick, 2000);
 }
 
-module.exports = { launch, buildCommand, which, findPidByEnv };
+// "OPEN IN STEAM / HEROIC / LUTRIS" on the game page
+function launcherCommand(game, env) {
+  const l = game.launch || {};
+  if (game.source === 'steam' && game.ids && /^\d+$/.test(String(game.ids.steam))) {
+    const url = 'steam://nav/games/details/' + game.ids.steam;
+    if (which('xdg-open', env)) return ['xdg-open', url];
+    return l.flatpakApp ? ['flatpak', 'run', l.flatpakApp, url] : ['steam', url];
+  }
+  if (game.source === 'heroic') return l.flatpakApp ? ['flatpak', 'run', l.flatpakApp] : ['heroic'];
+  if (game.source === 'lutris') return l.flatpakApp ? ['flatpak', 'run', l.flatpakApp] : ['lutris'];
+  return null;
+}
+
+function openLauncher(game, env) {
+  const argv = launcherCommand(game, env);
+  if (!argv) throw new Error('this game has no launcher to open');
+  const child = spawn(argv[0], argv.slice(1), { env, detached: true, stdio: 'ignore' });
+  child.on('error', () => {});
+  child.unref();
+  return argv;
+}
+
+module.exports = { launch, buildCommand, which, findPidByEnv, launcherCommand, openLauncher };

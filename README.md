@@ -10,7 +10,29 @@ Linux only for now.
 
 ## Status
 
-Phase 1 of 6: library scan, library grid with source filters, launching, controller / keyboard / mouse navigation, anti-cheat flags. Home (hero + Continue row), startup animation, quick settings, store, social / cloud tiles and the Null OS integration come next; see the design doc in the Null Grid project (`null-grid/null-play-design.md`).
+Phases 1–2 of 6 are in:
+- **Phase 1:** library scan, library grid with source filters, launching, controller / keyboard / mouse navigation, anti-cheat flags.
+- **Phase 2:** Home (hero banner + Continue row + library peek), the game page, artwork (launcher art → SteamGridDB → your own), the startup animation and the CRT-collapse exit.
+
+Quick settings, store, social / cloud tiles and the Null OS integration come next; see the design doc in the Null Grid project (`null-grid/null-play-design.md`).
+
+## Screens
+
+- **Startup:** about 1.6 s. The NULL // PLAY wordmark glitches in, then Packet walks along the bar while the libraries are scanned. Any button skips it; with reduced motion it's a plain fade.
+- **HOME:** a hero banner for the focused game (art, source, play time, last played, PLAY / DETAILS / ★), the **Continue** row of recently played games, and a peek at the library. Opens on the last game you played.
+- **LIBRARY:** every game as a cover grid, with source filters, sort and INSTALLED ONLY.
+- **Game page** (X on any game): stats, PLAY, favorite, OPEN IN STEAM / HEROIC / LUTRIS, and per-game options: Feral GameMode on/off, Hide from Continue, Set artwork.
+- **Exit to desktop:** CRT collapse to a line, then the app closes. Games you started keep running.
+
+## Artwork
+
+For each game and each kind of art (cover, hero banner, logo) NULL // PLAY uses, in order:
+1. art you set on the game page (copied into NULL // PLAY's own folder);
+2. the launcher's local art (Steam's library cache, Lutris covers);
+3. **SteamGridDB**, if you added an API key;
+4. Heroic's online art, downloaded once and cached.
+
+SteamGridDB is optional. Get a free key at steamgriddb.com → Preferences → API and paste it into the artwork picker (Set artwork on any game page). With a key, games missing a cover get one automatically, recently played games get a hero banner, and the picker shows up to 12 options per kind. The key is kept in the system keyring when one is available (KWallet / GNOME Keyring). Steam games are matched by app id; others by exact title.
 
 ## Open it
 
@@ -45,18 +67,25 @@ Games whose anti-cheat doesn't work on Linux get a red **⚠ ANTI-CHEAT BLOCKS L
 | Move | D-pad, left stick | D-pad, left stick | WASD, arrows | hover |
 | Play / select | A | ✕ | Enter, Space | click |
 | Back | B | ○ | Esc, Backspace | |
-| Favorite | X | □ | X | |
+| Game page | X | □ | X, I | |
 | Next filter | Y | △ | F (Shift+F back) | click a chip |
 | Switch tabs | LB / RB | L1 / R1 | 1 / 3, Tab | click a tab |
 | Page | LT / RT | L2 / R2 | PgUp / PgDn | wheel |
 | Rescan | | | R, F5 | |
 | Exit to desktop | View + Menu | Share + Options | Ctrl+Q | |
 
+In the artwork picker, LB / RB (1 / 3) switch between cover, hero and logo.
+
 The hint bar switches to the buttons of whatever you touched last.
 
 ## Privacy
 
-Everything is read from local files. The only network requests are the weekly anti-cheat list from GitHub and cover art Heroic already references (Epic / GOG CDNs). No accounts, no telemetry.
+Everything is read from local files. The only network requests are:
+- the weekly anti-cheat list from GitHub;
+- art Heroic already references (Epic / GOG / Amazon CDNs), fetched once;
+- SteamGridDB, only if you add a key, only for games missing art, with each miss remembered for a week.
+
+No accounts, no telemetry.
 
 ## Develop
 
@@ -64,15 +93,16 @@ Everything is read from local files. The only network requests are the weekly an
 npm ci
 npm start                       # windowed
 npm test                        # scanners, anti-cheat matching, launch commands
-xvfb-run -a -s "-screen 0 1440x900x24" node tests/ui-phase1.test.js   # the real app; needs xdotool
+xvfb-run -a -s "-screen 0 1440x900x24" node tests/ui-phase1.test.js   # library, nav, launching; needs xdotool
+xvfb-run -a -s "-screen 0 1440x900x24" node tests/ui-phase2.test.js   # home, game page, art, animations
 npm run dist:linux              # .deb, AppImage, .tar.gz for x64 + arm64 into dist/
 ```
 
-Tests run against a generated fake home folder (`tests/fixtures/make-home.js`) with Steam, Heroic, Lutris and `.desktop` games and logging stand-ins for `xdg-open`, `gamemoderun` and `lutris`.
+Tests run against a generated fake home folder (`tests/fixtures/make-home.js`) with Steam, Heroic, Lutris and `.desktop` games and logging stand-ins for `xdg-open`, `gamemoderun` and `lutris`. The Phase 2 test runs a stand-in SteamGridDB on localhost (`NULLPLAY_SGDB_BASE`); `NULLPLAY_TEST_PICK_FILE` replaces the native file dialog there.
 
 ## Release
 
-Push a tag matching `package.json`'s version (`v0.1.0` or `0.1.0`). The Release workflow tests, builds x64 + arm64 `.deb`, AppImage and `.tar.gz`, checks the `.deb` contains `/usr/bin/gamemode` and a `NULL // PLAY` `.desktop` entry (`Categories=Game`), and attaches everything to the GitHub release. Null OS pulls `null-play_<version>_amd64.deb` at ISO build time.
+Push a tag matching `package.json`'s version (`v0.2.0` or `0.2.0`). The Release workflow tests, builds x64 + arm64 `.deb`, AppImage and `.tar.gz`, checks the `.deb` contains `/usr/bin/gamemode` and a `NULL // PLAY` `.desktop` entry (`Categories=Game`), and attaches everything to the GitHub release. Null OS pulls `null-play_<version>_amd64.deb` at ISO build time.
 
 ## License
 

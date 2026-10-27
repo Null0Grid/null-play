@@ -6,6 +6,10 @@
 (function () {
   let current = null;
   const listeners = [];
+  // containers marked [data-nav-entry] pick where focus lands when you move
+  // into them from outside: a selector ("#hero-play") or "remember" (the item
+  // you were on last time)
+  const lastIn = new WeakMap();
 
   function visible(el) {
     if (!el.isConnected) return false;
@@ -27,14 +31,27 @@
     if (current && current !== el) current.classList.remove('focus');
     current = el;
     el.classList.add('focus');
+    const box = el.closest('[data-nav-entry]');
+    if (box) lastIn.set(box, el);
     if (!opts.noScroll) {
-      const wrap = el.closest('.grid-wrap');
-      if (wrap) {
+      const behavior = opts.instant ? 'auto' : 'smooth';
+      // horizontal rows (Continue, library peek) keep the focused item in view
+      const row = el.closest('.row');
+      if (row) {
         const r = el.getBoundingClientRect();
+        const w = row.getBoundingClientRect();
+        const pad = 30;
+        if (r.left < w.left + pad) row.scrollBy({ left: r.left - w.left - pad, behavior });
+        else if (r.right > w.right - pad) row.scrollBy({ left: r.right - w.right + pad, behavior });
+      }
+      const wrap = el.closest('[data-scroll]');
+      if (wrap) {
+        const r = (el.closest('.row-sec') || el).getBoundingClientRect();
         const w = wrap.getBoundingClientRect();
         const pad = 40;
-        if (r.top < w.top + pad) wrap.scrollBy({ top: r.top - w.top - pad, behavior: opts.instant ? 'auto' : 'smooth' });
-        else if (r.bottom > w.bottom - pad) wrap.scrollBy({ top: r.bottom - w.bottom + pad, behavior: opts.instant ? 'auto' : 'smooth' });
+        if (el.closest('.hero')) wrap.scrollTo({ top: 0, behavior });
+        else if (r.top < w.top + pad) wrap.scrollBy({ top: r.top - w.top - pad, behavior });
+        else if (r.bottom > w.bottom - pad) wrap.scrollBy({ top: r.bottom - w.bottom + pad, behavior });
       }
     }
     for (const fn of listeners) fn(el);
@@ -45,6 +62,7 @@
     if (!all.length) return false;
     if (!current || !all.includes(current)) { focus(all[0]); return true; }
     const cr = current.getBoundingClientRect();
+    const strictRow = !!current.closest('.grid, .row, .filterbar, .tabs');
     const c = center(cr);
     let best = null;
     let bestScore = Infinity;
@@ -62,12 +80,24 @@
       // same row/column wins: sideways offset costs much more than distance
       const horiz = dir === 'left' || dir === 'right';
       const overlap = horiz ? (r.bottom > cr.top && r.top < cr.bottom) : (r.right > cr.left && r.left < cr.right);
-      // left/right stay in the row: at the end of a row the press does nothing
-      if (horiz && !overlap) continue;
+      // in grids and rows, left/right stay in the row (at the end of a row the
+      // press does nothing); elsewhere a stop that isn't level still counts,
+      // just with a heavy penalty
+      if (horiz && !overlap && strictRow) continue;
       const score = primary + secondary * (horiz ? 4 : 1.2) - (overlap ? 10000 : 0);
       if (score < bestScore) { bestScore = score; best = el; }
     }
-    if (best) { focus(best); return true; }
+    if (best) {
+      const box = best.closest('[data-nav-entry]');
+      if (box && !box.contains(current)) {
+        const rule = box.getAttribute('data-nav-entry');
+        const remembered = lastIn.get(box);
+        const pick = rule === 'remember' ? (remembered && remembered.isConnected && all.includes(remembered) ? remembered : null) : box.querySelector(rule);
+        if (pick && all.includes(pick)) best = pick;
+      }
+      focus(best);
+      return true;
+    }
     return false;
   }
 
