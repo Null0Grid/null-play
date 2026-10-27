@@ -5,6 +5,7 @@
 (function () {
   const BTN = { a: 0, b: 1, x: 2, y: 3, lb: 4, rb: 5, lt: 6, rt: 7, view: 8, menu: 9, up: 12, down: 13, left: 14, right: 15, guide: 16 };
   const REPEAT = new Set(['up', 'down', 'left', 'right', 'lt', 'rt']);
+  const DEFER = new Set(['menu', 'view']);
   const FIRST_DELAY = 380;
   const RATE = 95;
   const listeners = [];
@@ -40,18 +41,20 @@
       if ((ax[0] || 0) > 0.5) state.right = true;
       if ((ax[1] || 0) < -0.5) state.up = true;
       if ((ax[1] || 0) > 0.5) state.down = true;
+      // View + Menu together: exit to desktop. Menu and View on their own
+      // fire when released, so the combo never opens quick settings first.
+      if (state.view && state.menu && !held._combo) { held._combo = true; emit('exit'); }
       for (const name of Object.keys(state)) {
         if (state[name]) {
-          if (!held[name]) { held[name] = { since: now, last: now }; emit(name); }
+          if (!held[name]) { held[name] = { since: now, last: now }; if (!DEFER.has(name)) emit(name); }
           else if (REPEAT.has(name) && now - held[name].since > FIRST_DELAY && now - held[name].last > RATE) { held[name].last = now; emit(name); }
         } else if (held[name]) {
           delete held[name];
+          if (DEFER.has(name) && !held._combo) emit(name);
           emit(name + ':up');
         }
       }
-      // View + Menu together: exit to desktop
-      if (state.view && state.menu && !held._combo) { held._combo = true; emit('exit'); }
-      if (!(state.view && state.menu)) delete held._combo;
+      if (!state.view && !state.menu) delete held._combo;
     }
     requestAnimationFrame(frame);
   }

@@ -2,7 +2,7 @@
 // Spatial focus navigation for controller / keyboard. Anything marked
 // [data-nav] and visible is a stop; a direction picks the nearest stop that
 // way, preferring ones in the same row (left/right) or column (up/down).
-// While a [data-modal] stop exists, only modal stops count.
+// Overlays (keyboard, dialogs, quick settings) take all stops while open.
 (function () {
   let current = null;
   const listeners = [];
@@ -18,9 +18,13 @@
     return !el.closest('[hidden]');
   }
 
+  // layers, top first: on-screen keyboard, dialogs, quick settings, the app
+  const LAYERS = ['[data-osk][data-nav]', '[data-modal][data-nav]', '[data-qs][data-nav]'];
   function stops() {
-    const modal = [...document.querySelectorAll('[data-modal][data-nav]')].filter(visible);
-    if (modal.length) return modal;
+    for (const sel of LAYERS) {
+      const s = [...document.querySelectorAll(sel)].filter(visible);
+      if (s.length) return s;
+    }
     return [...document.querySelectorAll('#app [data-nav]')].filter(visible);
   }
 

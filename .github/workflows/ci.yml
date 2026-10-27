@@ -25,12 +25,14 @@ jobs:
       - run: npm ci
       - name: Syntax
         run: |
-          for f in main.js preload.js src/*.js src/scan/*.js renderer/*.js tests/*.js; do
+          for f in main.js preload.js src/*.js src/scan/*.js renderer/*.js tests/*.js tests/fixtures/*.js; do
             node --check "$f" || { echo "::error file=$f::syntax error"; exit 1; }
           done
-      - name: Library scanners, anti-cheat matching, launch commands
+      - name: Library scanners, anti-cheat matching, launch commands, quick-settings backend
         run: npm test
       - name: The real app under Xvfb (keys, controller, mouse, launching, anti-cheat warning)
         run: xvfb-run -a -s "-screen 0 1440x900x24" node tests/ui-phase1.test.js
       - name: Home, game page, artwork (stand-in SteamGridDB), startup animation, exit
         run: xvfb-run -a -s "-screen 0 1440x900x24" node tests/ui-phase2.test.js
+      - name: Quick settings and on-screen keyboard (stand-in nmcli / wpctl / bluetoothctl)
+        run: xvfb-run -a -s "-screen 0 1440x900x24" node tests/ui-phase3.test.js

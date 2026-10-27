@@ -12,6 +12,7 @@ const { scanAll } = require('./src/scan');
 const { AntiCheat, loadSnapshot, compact, RAW_URL } = require('./src/anticheat');
 const { launch, openLauncher } = require('./src/launch');
 const { ArtManager, KINDS } = require('./src/art');
+const { System } = require('./src/system');
 
 const WINDOWED = process.argv.includes('--windowed') || process.env.NULLPLAY_WINDOWED === '1';
 const HOME = process.env.NULLPLAY_HOME || os.homedir();
@@ -324,6 +325,22 @@ app.whenReady().then(async () => {
     art.reset(g.id, kind);
     return { ok: true, game: publicGame(g) };
   });
+
+  // ---------- quick settings ----------
+  const sys = new System({ env: process.env, backlightDir: process.env.NULLPLAY_BACKLIGHT_DIR || '/sys/class/backlight' });
+  ipcMain.handle('sys:status', () => sys.status());
+  ipcMain.handle('sys:wifi-list', () => sys.wifiList());
+  ipcMain.handle('sys:wifi-connect', (_e, ssid, password) => sys.wifiConnect(String(ssid || ''), password == null ? null : String(password)));
+  ipcMain.handle('sys:wifi-radio', (_e, on) => sys.wifiRadio(!!on));
+  ipcMain.handle('sys:volume', (_e, level) => sys.setVolume(Number(level)));
+  ipcMain.handle('sys:mute', () => sys.toggleMute());
+  ipcMain.handle('sys:brightness', (_e, level) => sys.setBrightness(Number(level)));
+  ipcMain.handle('sys:controllers', () => sys.controllers());
+  ipcMain.handle('sys:bt-scan', () => sys.btScan(Number(process.env.NULLPLAY_BT_SCAN_SECS) || 12));
+  ipcMain.handle('sys:bt-pair', (_e, mac) => sys.btPair(String(mac || '')));
+  ipcMain.handle('sys:bt-connect', (_e, mac, on) => sys.btConnect(String(mac || ''), !!on));
+  ipcMain.handle('sys:bt-forget', (_e, mac) => sys.btForget(String(mac || '')));
+  ipcMain.handle('sys:power', (_e, action) => sys.power(String(action || '')));
 
   ipcMain.handle('app:quit', () => app.quit());
   ipcMain.handle('app:info', () => ({ version: app.getVersion(), windowed: WINDOWED }));

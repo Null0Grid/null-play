@@ -21,6 +21,11 @@
     <div class="spacer"></div>
     <div class="status">
       <span id="pad-status" class="pad" title="Controller"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 8h12a4 4 0 0 1 4 4l-1 5a2 2 0 0 1-3.6.8L15.5 16h-7l-1.9 1.8A2 2 0 0 1 3 17l-1-5a4 4 0 0 1 4-4z"/><path d="M7 11v3M5.5 12.5h3"/><circle cx="16" cy="11.5" r=".6"/><circle cx="18" cy="13.5" r=".6"/></svg><span class="dot"></span></span>
+      <button id="qs-btn" class="qs-btn" data-nav aria-label="Quick settings">
+        <svg id="qs-wifi-ico" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" aria-hidden="true"><path d="M2 8.5a15 15 0 0 1 20 0M5 12a10.5 10.5 0 0 1 14 0M8.5 15.5a5.5 5.5 0 0 1 7 0"/><circle cx="12" cy="19" r="1"/></svg>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9h4l5-4v14l-5-4H4z"/><path d="M16.5 8.5a5 5 0 0 1 0 7"/></svg>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" aria-hidden="true"><path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/></svg>
+      </button>
       <span id="clock" class="clock">--:--</span>
     </div>
   </header>
@@ -142,6 +147,72 @@
   </div>
 </div>
 
+<div id="qs" class="qs" hidden>
+  <div class="qs-backdrop" id="qs-backdrop"></div>
+  <aside class="qs-panel" role="dialog" aria-modal="true" aria-labelledby="qs-title">
+    <div class="qs-head"><h2 id="qs-title">QUICK SETTINGS</h2><span id="qs-clock" class="clock"></span></div>
+
+    <div id="qs-main" class="qs-body">
+      <button id="qs-wifi" class="qs-card qs-row" data-nav data-qs>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M2 8.5a15 15 0 0 1 20 0M5 12a10.5 10.5 0 0 1 14 0M8.5 15.5a5.5 5.5 0 0 1 7 0"/><circle cx="12" cy="19" r="1"/></svg>
+        <span class="qs-name">WI-FI</span>
+        <span id="qs-wifi-state" class="qs-state">…</span>
+        <span class="vt chev">›</span>
+      </button>
+
+      <div class="qs-card">
+        <button id="qs-vol" class="qs-slider" data-nav data-qs data-slider="volume" role="slider" aria-label="Volume" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+          <span class="qs-line"><span class="qs-name">VOLUME</span><span id="qs-vol-out" class="qs-sub"></span><span id="qs-vol-val" class="qs-val">–</span></span>
+          <span class="bar"><span id="qs-vol-fill" class="fill"></span></span>
+        </button>
+        <button id="qs-bri" class="qs-slider" data-nav data-qs data-slider="brightness" role="slider" aria-label="Brightness" aria-valuemin="1" aria-valuemax="100" aria-valuenow="0">
+          <span class="qs-line"><span class="qs-name">BRIGHTNESS</span><span id="qs-bri-via" class="qs-sub"></span><span id="qs-bri-val" class="qs-val">–</span></span>
+          <span class="bar"><span id="qs-bri-fill" class="fill"></span></span>
+        </button>
+        <div class="qs-hint vt">◀ ▶ to adjust · A to mute</div>
+      </div>
+
+      <div class="qs-card">
+        <div class="qs-line"><span class="qs-name dimname">CONTROLLERS</span><span id="qs-bt-state" class="qs-sub"></span></div>
+        <div id="qs-pads" class="qs-pads"></div>
+        <button id="qs-pair" class="qs-btn-wide" data-nav data-qs>+ PAIR NEW CONTROLLER</button>
+      </div>
+
+      <div class="qs-spacer"></div>
+      <div class="qs-power">
+        <button id="qs-exit" class="qs-pbtn" data-nav data-qs>EXIT TO DESKTOP</button>
+        <button id="qs-sleep" class="qs-pbtn" data-nav data-qs>SLEEP</button>
+        <button id="qs-off" class="qs-pbtn danger" data-nav data-qs>POWER OFF</button>
+      </div>
+    </div>
+
+    <div id="qs-wifi-view" class="qs-body" hidden>
+      <div class="qs-line"><button id="qs-wifi-back" class="qs-back" data-nav data-qs>‹ BACK</button><span class="qs-name">WI-FI</span><span class="spacer"></span><button id="qs-wifi-radio" class="qs-toggle" data-nav data-qs role="switch" aria-checked="true">ON</button></div>
+      <div id="qs-wifi-msg" class="qs-msg vt"></div>
+      <div id="qs-nets" class="qs-list"></div>
+    </div>
+
+    <div id="qs-pair-view" class="qs-body" hidden>
+      <div class="qs-line"><button id="qs-pair-back" class="qs-back" data-nav data-qs>‹ BACK</button><span class="qs-name">PAIR A CONTROLLER</span></div>
+      <p class="qs-p">Put the controller in pairing mode: Xbox, hold the pair button on top; DualSense / DualShock, hold Create/Share + PS; 8BitDo and others, see the controller's manual.</p>
+      <div id="qs-pair-msg" class="qs-msg vt"></div>
+      <div id="qs-found" class="qs-list"></div>
+      <button id="qs-rescan" class="qs-btn-wide" data-nav data-qs>SCAN AGAIN</button>
+    </div>
+  </aside>
+</div>
+
+<div id="osk" class="osk" hidden>
+  <div class="osk-box" role="dialog" aria-modal="true" aria-labelledby="osk-title">
+    <div class="osk-head">
+      <span id="osk-title" class="osk-title"></span>
+      <span id="osk-err" class="osk-err"></span>
+    </div>
+    <div class="osk-field"><span id="osk-text" class="osk-text"></span><span class="osk-caret"></span><button id="osk-reveal" class="osk-reveal" data-nav data-osk hidden>SHOW</button></div>
+    <div id="osk-keys" class="osk-keys"></div>
+  </div>
+</div>
+
 <div id="picker" class="modal" hidden>
   <div class="picker-box" role="dialog" aria-modal="true" aria-labelledby="picker-title">
     <div class="picker-head">
@@ -208,6 +279,7 @@
 
 <script src="nav.js"></script>
 <script src="gamepad.js"></script>
+<script src="osk.js"></script>
 <script src="app.js"></script>
 </body>
 </html>

@@ -38,6 +38,8 @@
     modalKind: null,
     picker: null, // { id, kind }
   };
+  // quick settings panel state (declared early: renderHints reads it)
+  const qs = { open: false, view: 'main', status: null, poll: null, timers: {}, lastAdjust: 0, returnFocus: null, scanning: false };
 
   // ---------- formatting ----------
   function fmtPlaytime(min) {
@@ -107,8 +109,16 @@
     };
     const left = el('span', 'h left');
     bar.append(left);
-    if (!$('#picker').hidden) { add('a', 'Select'); add('lb', 'Cover / Hero / Logo', 'lb'); add('b', 'Close'); return; }
+    if (window.OSK && OSK.isOpen) {
+      if (state.input === 'pad') { add('a', 'Type'); add('x', 'Delete'); add('y', 'Space'); add('lb', 'Shift', 'lb'); add('rb', '123', 'rb'); add('menu', 'Done', 'menu'); add('b', 'Cancel'); return; }
+      left.textContent = 'Type with your keyboard';
+      const k = (cap, label, cls) => { const h = el('span', 'h'); h.append(el('span', 'key ' + (cls || ''), cap), document.createTextNode(label)); bar.append(h); };
+      k('Enter', 'Done', 'a'); k('⌫', 'Delete'); k('Esc', 'Cancel', 'b');
+      return;
+    }
     if (!$('#modal').hidden) { add('a', 'Select'); add('b', 'Back'); return; }
+    if (!$('#picker').hidden) { add('a', 'Select'); add('lb', 'Cover / Hero / Logo', 'lb'); add('b', 'Close'); return; }
+    if (qs.open) { add('a', 'Select'); const h = el('span', 'h'); h.append(el('span', 'key', '◀ ▶'), document.createTextNode('Adjust')); bar.append(h); add('menu', 'Close', 'menu'); add('b', qs.view === 'main' ? 'Close' : 'Back'); return; }
     if (state.detailId) { add('a', 'Select'); add('b', 'Back'); return; }
     if (state.tab === 'library' && !$('#view-library').hidden) {
       const f = state.lib.games.length ? visibleGames().length + ' of ' + baseGames().length : '';
@@ -580,7 +590,12 @@
     if (state.picker) openPicker(state.picker.id, state.picker.kind);
   }
   $('#key-save').addEventListener('click', saveKey);
-  $('#key-input').addEventListener('click', () => $('#key-input').focus());
+  $('#key-input').addEventListener('click', () => {
+    const inp = $('#key-input');
+    if (state.input !== 'pad') { inp.focus(); return; }
+    // with a controller, type on the on-screen keyboard
+    OSK.open({ title: 'STEAMGRIDDB API KEY', value: inp.value, maxLength: 64, onDone: (v) => { inp.value = v; Nav.focus(inp); saveKey(); }, onOpen: renderHints });
+  });
 
   // ---------- launching ----------
   let toastTimer = null;
@@ -638,6 +653,12 @@
       $('#modal-detail').textContent = g.anticheat.detail;
       $('#modal-ac').textContent = (g.anticheat.anticheats.length ? 'Anti-cheat: ' + g.anticheat.anticheats.join(', ') + ' · ' : '') + 'source: areweanticheatyet.com';
       $('#modal-go').textContent = 'LAUNCH ANYWAY';
+    } else if (kind === 'power') {
+      badge.hidden = true;
+      $('#modal-title').textContent = g.action === 'suspend' ? 'SLEEP NOW?' : 'POWER OFF?';
+      $('#modal-detail').textContent = g.action === 'suspend' ? 'The computer goes to sleep. Press the power button or a key to wake it.' : 'The computer shuts down. Save your game first; running games are closed.';
+      $('#modal-ac').textContent = '';
+      $('#modal-go').textContent = g.action === 'suspend' ? 'SLEEP' : 'POWER OFF';
     } else if (kind === 'exit') {
       badge.hidden = true;
       $('#modal-title').textContent = 'EXIT TO DESKTOP?';
@@ -663,6 +684,7 @@
     closeModal();
     if (kind === 'anticheat' && g) doLaunch(g);
     if (kind === 'exit') exitToDesktop();
+    if (kind === 'power' && g) { closeQS(); api.sys.power(g.action); toast(g.action === 'suspend' ? 'GOING TO SLEEP…' : 'POWERING OFF…', null, 4000); }
   });
 
   // ---------- exit: CRT collapse ----------
@@ -726,10 +748,281 @@
     return true;
   }
 
+  // ---------- quick settings ----------
+
+  function qsShow(view, focusSel) {
+    qs.view = view;
+    $('#qs-main').hidden = view !== 'main';
+    $('#qs-wifi-view').hidden = view !== 'wifi';
+    $('#qs-pair-view').hidden = view !== 'pair';
+    if (focusSel) Nav.focus($(focusSel));
+    renderHints();
+  }
+
+  async function openQS() {
+    if (qs.open) return;
+    qs.open = true;
+    qs.returnFocus = Nav.current;
+    $('#qs').hidden = false;
+    $('#qs-clock').textContent = $('#clock').textContent;
+    qsShow('main', '#qs-wifi');
+    await refreshQS();
+    clearInterval(qs.poll);
+    qs.poll = setInterval(() => { if (qs.open && qs.view === 'main') refreshQS(); }, 5000);
+  }
+
+  function closeQS() {
+    if (!qs.open) return;
+    qs.open = false;
+    clearInterval(qs.poll);
+    $('#qs').hidden = true;
+    if (qs.returnFocus && qs.returnFocus.isConnected) Nav.focus(qs.returnFocus);
+    renderHints();
+  }
+
+  async function refreshQS() {
+    const s = await api.sys.status();
+    if (!qs.open) return;
+    qs.status = s;
+    renderQSWifi(s.wifi);
+    // don't fight the user while they're dragging a slider
+    if (Date.now() - qs.lastAdjust > 1500) { renderQSVol(s.volume); renderQSBri(s.brightness); }
+    renderQSPads(s.controllers);
+  }
+
+  function renderQSWifi(w) {
+    const st = $('#qs-wifi-state');
+    st.classList.remove('ok');
+    let txt;
+    if (!w || !w.available) txt = (w && w.reason) || 'unavailable';
+    else if (!w.enabled) txt = 'off';
+    else if (w.connected) { txt = w.ssid + (w.signal != null ? ' · ' + w.signal + '%' : ''); st.classList.add('ok'); }
+    else txt = 'not connected';
+    st.textContent = txt;
+    $('#qs-wifi-ico').classList.toggle('off', !(w && w.connected));
+  }
+
+  function setSlider(id, level, { disabled, muted, label } = {}) {
+    const b = $('#' + id);
+    b.setAttribute('aria-disabled', String(!!disabled));
+    b.classList.toggle('muted', !!muted);
+    b.setAttribute('aria-valuenow', String(level || 0));
+    $('#' + id + '-fill').style.width = (disabled ? 0 : level) + '%';
+    $('#' + id + '-val').textContent = disabled ? '–' : muted ? 'MUTED' : level + '%';
+    if (label != null) b.setAttribute('aria-valuetext', label);
+  }
+  function renderQSVol(v) {
+    const ok = v && v.available;
+    qs.vol = ok ? v.level : 0;
+    qs.muted = ok && v.muted;
+    setSlider('qs-vol', qs.vol, { disabled: !ok, muted: qs.muted });
+    $('#qs-vol-out').textContent = ok ? (v.output || '') : 'no audio output found';
+  }
+  function renderQSBri(b) {
+    const ok = b && b.available;
+    qs.bri = ok ? b.level : 0;
+    setSlider('qs-bri', qs.bri, { disabled: !ok });
+    $('#qs-bri-via').textContent = ok ? (b.via === 'ddcutil' ? 'monitor' : 'screen') : (b && b.reason) || 'unavailable';
+  }
+
+  function renderQSPads(c) {
+    const box = $('#qs-pads');
+    const keep = Nav.current && Nav.current.dataset && Nav.current.dataset.mac;
+    box.textContent = '';
+    $('#qs-bt-state').textContent = !c || !c.available ? ((c && c.reason) || 'unavailable') : c.powered ? 'Bluetooth on' : 'Bluetooth off';
+    $('#qs-pair').hidden = !(c && c.available);
+    if (c && c.available) {
+      if (!c.devices.length) box.append(el('div', 'qs-hint vt', 'No controllers paired yet.'));
+      for (const d of c.devices) {
+        const b = el('button', 'qs-pad' + (d.connected ? ' on' : ''));
+        b.dataset.nav = '';
+        b.dataset.qs = '';
+        b.dataset.mac = d.mac;
+        b.append(el('span', 'dot'), el('span', 'nm', d.name), el('span', 'st', d.connected ? 'connected' + (d.battery != null ? ' · ' + d.battery + '%' : '') : 'off'));
+        b.setAttribute('aria-label', d.name + (d.connected ? ', connected' : ', not connected') + (d.battery != null ? ', battery ' + d.battery + ' percent' : ''));
+        b.addEventListener('click', () => padToggle(d));
+        box.append(b);
+      }
+    }
+    if (keep) { const k = box.querySelector('[data-mac="' + CSS.escape(keep) + '"]'); if (k) Nav.focus(k, { noScroll: true }); }
+  }
+
+  async function padToggle(d) {
+    toast((d.connected ? 'Disconnecting ' : 'Connecting ') + d.name + '…', null, 2500);
+    const r = await api.sys.btConnect(d.mac, !d.connected);
+    toast(r.ok ? (d.connected ? d.name + ' disconnected' : d.name + ' connected') : r.error, r.ok ? null : 'err');
+    refreshQS();
+  }
+
+  function adjust(kind, delta) {
+    qs.lastAdjust = Date.now();
+    if (kind === 'volume') {
+      if (!qs.status || !qs.status.volume || !qs.status.volume.available) return;
+      qs.vol = Math.max(0, Math.min(100, (qs.vol || 0) + delta));
+      qs.muted = qs.muted && qs.vol === 0;
+      setSlider('qs-vol', qs.vol, { muted: qs.muted });
+      clearTimeout(qs.timers.vol);
+      qs.timers.vol = setTimeout(async () => { const v = await api.sys.setVolume(qs.vol); qs.status.volume = v; }, 120);
+    } else {
+      if (!qs.status || !qs.status.brightness || !qs.status.brightness.available) return;
+      qs.bri = Math.max(1, Math.min(100, (qs.bri || 0) + delta));
+      setSlider('qs-bri', qs.bri, {});
+      clearTimeout(qs.timers.bri);
+      qs.timers.bri = setTimeout(async () => { const b = await api.sys.setBrightness(qs.bri); if (b && b.error) toast(b.error, 'err'); }, qs.status.brightness.via === 'ddcutil' ? 350 : 120);
+    }
+  }
+
+  $('#qs-btn').addEventListener('click', () => openQS());
+  $('#qs-backdrop').addEventListener('click', () => closeQS());
+  $('#qs-vol').addEventListener('click', async () => {
+    if (!qs.status || !qs.status.volume || !qs.status.volume.available) return;
+    const v = await api.sys.toggleMute();
+    qs.status.volume = v;
+    renderQSVol(v);
+  });
+  $('#qs-bri').addEventListener('click', () => {});
+  $('#qs-exit').addEventListener('click', () => openModal('exit'));
+  $('#qs-sleep').addEventListener('click', () => openModal('power', { action: 'suspend' }));
+  $('#qs-off').addEventListener('click', () => openModal('power', { action: 'poweroff' }));
+
+  // Wi-Fi networks
+  function wifiMsg(text, kind) { const m = $('#qs-wifi-msg'); m.textContent = text || ''; m.className = 'qs-msg vt' + (kind ? ' ' + kind : ''); }
+  async function openWifi() {
+    qsShow('wifi', '#qs-wifi-back');
+    const w = qs.status && qs.status.wifi;
+    const radio = $('#qs-wifi-radio');
+    radio.setAttribute('aria-checked', String(!!(w && w.enabled)));
+    radio.textContent = w && w.enabled ? 'ON' : 'OFF';
+    $('#qs-nets').textContent = '';
+    if (!w || !w.available) { wifiMsg((w && w.reason) || 'Wi-Fi isn’t available on this computer.', 'err'); return; }
+    if (!w.enabled) { wifiMsg('Wi-Fi is off.'); return; }
+    await loadNets();
+  }
+  async function loadNets() {
+    wifiMsg('Scanning for networks…');
+    const r = await api.sys.wifiList();
+    if (!qs.open || qs.view !== 'wifi') return;
+    const box = $('#qs-nets');
+    box.textContent = '';
+    if (!r.available) { wifiMsg('Couldn’t scan for networks.', 'err'); return; }
+    wifiMsg(r.networks.length ? r.networks.length + ' networks' : 'No networks found.');
+    for (const n of r.networks) {
+      const b = el('button', 'qs-net' + (n.inUse ? ' cur' : ''));
+      b.dataset.nav = '';
+      b.dataset.qs = '';
+      b.dataset.ssid = n.ssid;
+      const sig = el('span', 'sig');
+      const bars = n.signal >= 75 ? 4 : n.signal >= 50 ? 3 : n.signal >= 25 ? 2 : 1;
+      for (let i = 0; i < 4; i++) sig.append(el('i', i < bars ? 'on' : ''));
+      b.append(sig, el('span', 'nm', n.ssid), el('span', 'meta', (n.inUse ? 'connected · ' : '') + n.band + (n.secure ? ' · secured' : ' · open')));
+      b.setAttribute('aria-label', n.ssid + ', signal ' + n.signal + ' percent, ' + (n.secure ? 'secured' : 'open') + (n.inUse ? ', connected' : ''));
+      b.addEventListener('click', () => connectNet(n));
+      box.append(b);
+    }
+    const first = box.querySelector('.qs-net');
+    if (first && Nav.current && Nav.current.id === 'qs-wifi-back') Nav.focus(first);
+  }
+  async function connectNet(n, password) {
+    if (n.inUse && password == null) { wifiMsg('Already connected to ' + n.ssid + '.', 'ok'); return; }
+    wifiMsg('Connecting to ' + n.ssid + '…');
+    const r = await api.sys.wifiConnect(n.ssid, password == null ? null : password);
+    if (r.ok) {
+      wifiMsg('Connected to ' + n.ssid + '.', 'ok');
+      toast('CONNECTED TO ' + n.ssid.toUpperCase(), null, 2000);
+      const s = await api.sys.status();
+      qs.status = s;
+      renderQSWifi(s.wifi);
+      if (qs.view === 'wifi') loadNets().then(() => { const b = $('#qs-nets [data-ssid="' + CSS.escape(n.ssid) + '"]'); if (b) Nav.focus(b); });
+      return;
+    }
+    if (r.needsPassword) {
+      wifiMsg(r.error, password != null ? 'err' : null);
+      OSK.open({
+        title: 'PASSWORD FOR ' + n.ssid.toUpperCase(),
+        secret: true,
+        maxLength: 63,
+        error: password != null ? 'Wrong password, try again' : '',
+        onDone: (pw) => { renderHints(); connectNet(n, pw); },
+        onCancel: () => { wifiMsg(''); renderHints(); },
+        onOpen: renderHints,
+      });
+      return;
+    }
+    wifiMsg(r.error || 'Couldn’t connect.', 'err');
+  }
+  $('#qs-wifi').addEventListener('click', () => openWifi());
+  $('#qs-wifi-back').addEventListener('click', () => { qsShow('main', '#qs-wifi'); refreshQS(); });
+  $('#qs-wifi-radio').addEventListener('click', async () => {
+    const on = $('#qs-wifi-radio').getAttribute('aria-checked') !== 'true';
+    wifiMsg(on ? 'Turning Wi-Fi on…' : 'Turning Wi-Fi off…');
+    await api.sys.wifiRadio(on);
+    qs.status = await api.sys.status();
+    renderQSWifi(qs.status.wifi);
+    await openWifi();
+    Nav.focus($('#qs-wifi-radio'));
+  });
+
+  // controller pairing
+  function pairMsg(text, kind) { const m = $('#qs-pair-msg'); m.textContent = text || ''; m.className = 'qs-msg vt' + (kind ? ' ' + kind : ''); }
+  async function scanPads() {
+    if (qs.scanning) return;
+    qs.scanning = true;
+    $('#qs-found').textContent = '';
+    pairMsg('Looking for controllers in pairing mode…');
+    const r = await api.sys.btScan();
+    qs.scanning = false;
+    if (!qs.open || qs.view !== 'pair') return;
+    const box = $('#qs-found');
+    if (!r.found.length) { pairMsg('No new controllers found. Check it’s in pairing mode (fast-blinking light), then scan again.'); Nav.focus($('#qs-rescan')); return; }
+    pairMsg('Found ' + r.found.length + (r.found.length === 1 ? ' controller' : ' controllers') + '. Pick one to pair.', 'ok');
+    for (const d of r.found) {
+      const b = el('button', 'qs-net');
+      b.dataset.nav = '';
+      b.dataset.qs = '';
+      b.dataset.mac = d.mac;
+      b.append(el('span', 'nm', d.name), el('span', 'meta', 'PAIR'));
+      b.addEventListener('click', () => pairPad(d));
+      box.append(b);
+    }
+    Nav.focus(box.querySelector('.qs-net'));
+  }
+  async function pairPad(d) {
+    pairMsg('Pairing ' + d.name + '…');
+    const r = await api.sys.btPair(d.mac);
+    if (!r.ok) { pairMsg(r.error, 'err'); return; }
+    pairMsg(d.name + ' paired' + (r.connected ? ' and connected.' : '. Turn it on to connect.'), 'ok');
+    toast(d.name.toUpperCase() + ' PAIRED', null, 2000);
+    setTimeout(async () => { if (qs.open && qs.view === 'pair') { qsShow('main', '#qs-pair'); await refreshQS(); } }, 1200);
+  }
+  $('#qs-pair').addEventListener('click', () => { qsShow('pair', '#qs-pair-back'); scanPads(); });
+  $('#qs-rescan').addEventListener('click', () => scanPads());
+  $('#qs-pair-back').addEventListener('click', () => { qsShow('main', '#qs-pair'); refreshQS(); });
+
+  function qsAct(a) {
+    switch (a) {
+      case 'left': case 'right':
+        if (Nav.current && Nav.current.dataset.slider) { adjust(Nav.current.dataset.slider, a === 'right' ? 5 : -5); return; }
+        Nav.move(a);
+        return;
+      case 'up': case 'down': Nav.move(a); return;
+      case 'a': Nav.activate(); return;
+      case 'b':
+        if (qs.view === 'wifi') { qsShow('main', '#qs-wifi'); refreshQS(); }
+        else if (qs.view === 'pair') { qsShow('main', '#qs-pair'); refreshQS(); }
+        else closeQS();
+        return;
+      case 'menu': closeQS(); return;
+      case 'exit': openModal('exit'); return;
+      default: return;
+    }
+  }
+
   // ---------- actions (shared by controller, keyboard, mouse) ----------
   function act(a) {
     if (exiting) return;
     if (bootSwallows()) return;
+    if (OSK.isOpen) { OSK.action(a); if (!OSK.isOpen) renderHints(); return; }
+    if (qs.open && $('#modal').hidden) { qsAct(a); return; }
     const picker = !$('#picker').hidden;
     const modal = !$('#modal').hidden || picker;
     switch (a) {
@@ -760,7 +1053,7 @@
           Nav.focus(tiles[j]);
         }
         break;
-      case 'menu': if (!modal) toast('Quick settings are coming soon.', null, 2000); break;
+      case 'menu': if (!modal) openQS(); break;
       case 'exit': if (!modal) openModal('exit'); break;
       default: break;
     }
@@ -775,6 +1068,7 @@
   };
   document.addEventListener('keydown', (e) => {
     setInput('keyboard');
+    if (OSK.isOpen) { e.preventDefault(); if (!bootSwallows()) { OSK.key(e); if (!OSK.isOpen) renderHints(); } return; }
     // typing in a text field: only Enter, Esc and up/down leave it
     if (e.target && e.target.tagName === 'INPUT') {
       if (bootSwallows()) { e.preventDefault(); return; }
@@ -786,8 +1080,10 @@
     if (e.ctrlKey && (e.key === 'q' || e.key === 'Q')) { e.preventDefault(); act('exit'); return; }
     if (e.ctrlKey || e.altKey || e.metaKey) return;
     if (e.key === 'Tab') { e.preventDefault(); act(e.shiftKey ? 'lb' : 'rb'); return; }
-    if ((e.key === 'F' || e.key === 'f') && e.shiftKey) { e.preventDefault(); if (!bootSwallows() && state.tab === 'library' && state.lib.games.length && !state.detailId) cycleFilter(-1); return; }
-    if (e.key === 'r' || e.key === 'F5') { e.preventDefault(); if (!bootSwallows()) rescan(); return; }
+    // page shortcuts only when nothing is open on top
+    const overlay = qs.open || !$('#modal').hidden || !$('#picker').hidden;
+    if ((e.key === 'F' || e.key === 'f') && e.shiftKey) { e.preventDefault(); if (!overlay && !bootSwallows() && state.tab === 'library' && state.lib.games.length && !state.detailId) cycleFilter(-1); return; }
+    if (e.key === 'r' || e.key === 'F5') { e.preventDefault(); if (!overlay && !bootSwallows()) rescan(); return; }
     const k = KEYS[e.key] || KEYS[e.key.toLowerCase()];
     if (!k) { bootSwallows(); return; }
     e.preventDefault();
@@ -821,12 +1117,18 @@
   });
 
   // ---------- clock ----------
-  function tickClock() { $('#clock').textContent = new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }); }
+  function tickClock() { const t = new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }); $('#clock').textContent = t; $('#qs-clock').textContent = t; }
   tickClock();
   setInterval(tickClock, 10000);
 
   // ---------- data ----------
   function applyLibrary(lib) {
+    // repaint underneath an open overlay without taking its focus away
+    const overlayFocus = (qs.open || !$('#modal').hidden || OSK.isOpen) ? Nav.current : null;
+    applyLibraryInner(lib);
+    if (overlayFocus && overlayFocus.isConnected) Nav.focus(overlayFocus, { noScroll: true });
+  }
+  function applyLibraryInner(lib) {
     const keep = currentGameId() || state.heroId;
     state.lib = lib;
     state.heroId = null;
@@ -855,7 +1157,7 @@
   });
 
   // expose a little state for the end-to-end tests
-  window.__np = { state, visibleGames, continueList, boot };
+  window.__np = { state, visibleGames, continueList, boot, qs };
 
   api.getLibrary().then((lib) => {
     state.loaded = true;
