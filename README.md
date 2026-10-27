@@ -123,7 +123,7 @@ Tests run against a generated fake home folder (`tests/fixtures/make-home.js`) w
 
 ## Release
 
-Push a tag matching `package.json`'s version (`v0.3.0` or `0.3.0`). The Release workflow tests, builds x64 + arm64 `.deb`, AppImage and `.tar.gz`, checks the `.deb` contains `/usr/bin/gamemode` and a `NULL // PLAY` `.desktop` entry (`Categories=Game`), and attaches everything to the GitHub release. Null OS pulls `null-play_<version>_amd64.deb` at ISO build time.
+Push a tag matching `package.json`'s version (`v1.1.0` or `1.1.0`). The Release workflow tests, builds x64 + arm64 `.deb`, AppImage and `.tar.gz`, checks the `.deb` contains `/usr/bin/gamemode` and a `NULL // PLAY` `.desktop` entry (`Categories=Game`), and attaches everything to the GitHub release. Null OS pulls `null-play_<version>_amd64.deb` at ISO build time.
 
 ## License
 

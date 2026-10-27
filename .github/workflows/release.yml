@@ -1,7 +1,7 @@
 name: Release
 
 # Push a tag that matches the app version (package.json), with or without a
-# "v": v0.3.0 or 0.3.0. Or, for a tag that already exists: Actions > Release
+# "v": v1.1.0 or 1.1.0. Or, for a tag that already exists: Actions > Release
 # > Run workflow, and type the tag.
 # Builds the .deb, AppImage and .tar.gz for x64 and arm64 and attaches them
 # to the release for that tag. Null OS's ISO build pulls the newest asset
@@ -13,7 +13,7 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: "Existing tag to build and attach to its release (e.g. 0.3.0)"
+        description: "Existing tag to build and attach to its release (e.g. 1.1.0)"
         required: true
 
 env:
