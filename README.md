@@ -41,7 +41,7 @@ Store, social / cloud tiles and the Null OS integration come next; see the desig
 | Controllers | `bluetoothctl` (BlueZ) | pair, trust, connect |
 | Sleep / power off | `systemctl suspend` / `poweroff` | allowed for the logged-in user by logind |
 
-A missing tool just shows that section as unavailable.
+With the `.deb` all of these are installed for you. Running the AppImage or `.tar.gz` on a system without one of them just shows that section as unavailable.
 
 ## Artwork
 
@@ -65,6 +65,7 @@ SteamGridDB is optional. Get a free key at steamgriddb.com → Preferences → A
 | | |
 |---|---|
 | Commands | `null-play`, `nullplay` and `gamemode` (all open it full screen) |
+| Everything it uses | Feral GameMode, NetworkManager, WirePlumber (PipeWire), BlueZ, ddcutil and gdbus come in as dependencies, so every feature works out of the box. `i2c-dev` is loaded at boot so ddcutil can set external-monitor brightness |
 | Menu entry | `NULL // PLAY` under Games |
 | Desktop shortcut | for every existing user who has a Desktop folder, and for new accounts (from `/etc/skel/Desktop`, which also covers the Null OS live user). Added once per user: if you delete it, an upgrade won't bring it back |
 | Taskbar pin | right away for anyone logged in to Plasma, and for everyone else at their next login (a Plasma update script). Added once; unpin it and it stays unpinned |

@@ -57,6 +57,15 @@ if apparmor_status --enabled > /dev/null 2>&1; then
 fi
 
 # ---------------------------------------------------------------------------
+# NULL // PLAY: external-monitor brightness (ddcutil needs i2c-dev; it loads at
+# every boot from /usr/lib/modules-load.d, and now, unless this is a chroot
+# such as an ISO build)
+# ---------------------------------------------------------------------------
+if ! { [ -x /usr/bin/ischroot ] && /usr/bin/ischroot; }; then
+  modprobe i2c-dev >/dev/null 2>&1 || true
+fi
+
+# ---------------------------------------------------------------------------
 # NULL // PLAY: desktop shortcut and taskbar pin
 # (`nullplay` and `gamemode` are shipped as files in /usr/bin)
 # ---------------------------------------------------------------------------

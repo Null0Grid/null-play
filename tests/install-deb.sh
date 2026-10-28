@@ -33,8 +33,19 @@ echo "\$(id -un) \$DBUS_SESSION_BUS_ADDRESS \$*" >> $LOG
 EOF
 chmod 755 /usr/bin/gdbus
 
-# ---- install
+# ---- install (the extras it depends on come in too). policy-rc.d stops
+# package scripts from starting services, so pulling in NetworkManager can't
+# take over the network of the machine running this test.
+NP_POLICY_RC=0
+if [ ! -e /usr/sbin/policy-rc.d ]; then printf '#!/bin/sh\nexit 101\n' > /usr/sbin/policy-rc.d; chmod 755 /usr/sbin/policy-rc.d; NP_POLICY_RC=1; fi
 DEBIAN_FRONTEND=noninteractive apt-get install -y "$DEB" > /tmp/np-apt.log 2>&1 || { tail -20 /tmp/np-apt.log; fail "apt install"; }
+for pkg in gamemode gamemode-daemon network-manager wireplumber bluez ddcutil libglib2.0-bin; do
+  check "extra installed: $pkg" sh -c "dpkg-query -W -f='\${Status}' $pkg | grep -q 'install ok installed'"
+done
+check "extra: gamemoderun available (/usr/games or PATH)" sh -c 'command -v gamemoderun || test -x /usr/games/gamemoderun'
+check "extra: gamemoded available" test -x /usr/bin/gamemoded
+check "extra: nmcli, wpctl, bluetoothctl, ddcutil, gdbus available" sh -c 'for c in nmcli wpctl bluetoothctl ddcutil gdbus.np-real gdbus; do command -v $c >/dev/null || [ $c = gdbus.np-real ] || exit 1; done'
+check "extra: i2c-dev loads at boot for ddcutil" grep -qx 'i2c-dev' /usr/lib/modules-load.d/null-play-i2c.conf
 check "null-play command installed" test -x /usr/bin/null-play
 check "nullplay command installed and opens null-play" grep -q 'exec /usr/bin/null-play' /usr/bin/nullplay
 check "gamemode command installed and opens null-play" grep -q 'exec /usr/bin/null-play' /usr/bin/gamemode
@@ -66,6 +77,7 @@ check "reinstall: no second taskbar pin call" test ! -s "$LOG"
 # ---- removal
 cp /usr/share/applications/null-play.desktop /tmp/np-entry.desktop
 DEBIAN_FRONTEND=noninteractive apt-get remove -y null-play > /tmp/np-apt3.log 2>&1 || fail "apt remove"
+check "remove: i2c-dev boot file removed" test ! -e /usr/lib/modules-load.d/null-play-i2c.conf
 check "remove: commands gone" sh -c '! test -e /usr/bin/nullplay && ! test -e /usr/bin/gamemode && ! test -e /usr/bin/null-play'
 check "remove: npgamer's shortcut removed" test ! -e /home/npgamer/Desktop/null-play.desktop
 check "remove: the user's own .desktop file kept" test -f /home/npdeleter/notes.desktop
@@ -74,6 +86,7 @@ check "remove: taskbar unpinned live for the logged-in user" grep -q "^npgamer .
 check "remove: installer state cleared" test ! -e /var/lib/null-play
 
 # ---- tidy up
+[ "$NP_POLICY_RC" = 1 ] && rm -f /usr/sbin/policy-rc.d
 rm -f /usr/bin/gdbus "/run/user/$GAMER_UID/bus"
 if [ -e /usr/bin/gdbus.np-real ]; then mv /usr/bin/gdbus.np-real /usr/bin/gdbus; fi
 for u in npgamer npnodesk npdeleter npnew; do userdel -r "$u" >/dev/null 2>&1; done

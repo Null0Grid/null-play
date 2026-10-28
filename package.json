@@ -95,18 +95,19 @@
         "xdg-utils",
         "libatspi2.0-0",
         "libuuid1",
-        "libsecret-1-0"
-      ],
-      "recommends": [
+        "libsecret-1-0",
         "gamemode",
-        "libglib2.0-bin",
+        "network-manager",
+        "wireplumber",
+        "bluez",
         "ddcutil",
-        "bluez"
+        "libglib2.0-bin"
       ],
       "fpm": [
         "build/gamemode=/usr/bin/gamemode",
         "build/nullplay=/usr/bin/nullplay",
-        "build/null-play-taskbar.js=/usr/share/plasma/shells/org.kde.plasma.desktop/contents/updates/null-play-taskbar.js"
+        "build/null-play-taskbar.js=/usr/share/plasma/shells/org.kde.plasma.desktop/contents/updates/null-play-taskbar.js",
+        "build/null-play-i2c.conf=/usr/lib/modules-load.d/null-play-i2c.conf"
       ],
       "afterInstall": "build/after-install.sh",
       "afterRemove": "build/after-remove.sh"

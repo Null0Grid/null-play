@@ -124,7 +124,13 @@ async function t(name, fn) {
     const steam = buildCommand({ source: 'steam', launch: { kind: 'url', url: 'steam://rungameid/1145360' } }, { env });
     assert.deepStrictEqual(steam.argv, ['xdg-open', 'steam://rungameid/1145360']);
     const desk = buildCommand({ source: 'desktop', launch: { kind: 'exec', argv: ['supertuxkart'] } }, { env });
-    assert.deepStrictEqual(desk.argv, ['gamemoderun', 'supertuxkart']);
+    assert.deepStrictEqual([path.basename(desk.argv[0]), ...desk.argv.slice(1)], ['gamemoderun', 'supertuxkart']);
+    assert.ok(path.isAbsolute(desk.argv[0]), 'full path, so /usr/games works off PATH');
+    const fs = require('fs');
+    const games = fs.mkdtempSync(require('os').tmpdir() + '/np-usrgames-');
+    fs.writeFileSync(games + '/gamemoderun', '#!/bin/sh\n', { mode: 0o755 });
+    const { which } = require('../src/launch');
+    assert.strictEqual(which('gamemoderun', { PATH: '/nonexistent' }, [games]), games + '/gamemoderun');
     const off = buildCommand({ source: 'desktop', launch: { kind: 'exec', argv: ['supertuxkart'] } }, { env, gamemode: false });
     assert.deepStrictEqual(off.argv, ['supertuxkart']);
     assert.throws(() => buildCommand({ launch: { kind: 'url', url: 'steam://rungameid/1;rm -rf' } }, { env }));

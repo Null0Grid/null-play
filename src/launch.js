@@ -8,8 +8,10 @@ const fs = require('fs');
 const path = require('path');
 const { spawn, execFile } = require('child_process');
 
-function which(cmd, env) {
-  for (const d of String(env.PATH || '').split(':')) {
+// extra: folders to look in after PATH (Debian and Ubuntu put gamemoderun in
+// /usr/games, which isn't on PATH in every desktop session)
+function which(cmd, env, extra = []) {
+  for (const d of [...String(env.PATH || '').split(':'), ...extra]) {
     if (!d) continue;
     const p = path.join(d, cmd);
     try { fs.accessSync(p, fs.constants.X_OK); return p; } catch {}
@@ -32,8 +34,8 @@ function buildCommand(game, { env, gamemode = true } = {}) {
   }
   if (l.kind === 'exec') {
     const argv = [...l.argv];
-    const gm = gamemode && which('gamemoderun', env);
-    return { argv: gm ? ['gamemoderun', ...argv] : argv, cwd: l.cwd || undefined, gamemode: !!gm };
+    const gm = gamemode && which('gamemoderun', env, ['/usr/games']);
+    return { argv: gm ? [gm, ...argv] : argv, cwd: l.cwd || undefined, gamemode: !!gm };
   }
   throw new Error('unknown launch kind');
 }
