@@ -344,13 +344,15 @@
   }
   function renderLibrary(keepId) { renderFilters(); renderGrid(keepId); renderHints(); }
   function setFilter(f) {
+    // pressing a chip keeps focus on the chips (check before re-rendering,
+    // which replaces the chip and moves focus into the grid)
+    const fromPill = !!(Nav.current && Nav.current.dataset && Nav.current.dataset.filter);
     state.filter = f;
     renderFilters(); renderGrid();
     $('#grid-wrap').scrollTop = 0;
     renderHints();
     const pill = $('#filters [data-filter="' + CSS.escape(f) + '"]');
-    if (Nav.current && Nav.current.dataset && Nav.current.dataset.filter) Nav.focus(pill);
-    else if (!document.querySelector('#grid .tile')) Nav.focus(pill);
+    if (fromPill || !document.querySelector('#grid .tile')) Nav.focus(pill);
   }
   function cycleFilter(step) {
     const list = filterList().map((x) => x[0]);
